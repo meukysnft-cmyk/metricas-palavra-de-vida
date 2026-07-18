@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Metricas Palavra de Vida</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
@@ -1030,6 +1032,17 @@ var loggedIn = false;
 var apiConfigured = false;
 var homeUnlocked = false;
 
+firebase.initializeApp({
+  apiKey: "AIzaSyBkeCOnd1sU_U8B49OP6Qs1cg4ZI7Z6iCs",
+  authDomain: "palavra-de-vida-ddd75.firebaseapp.com",
+  projectId: "palavra-de-vida-ddd75",
+  storageBucket: "palavra-de-vida-ddd75.firebasestorage.app",
+  messagingSenderId: "263798915535",
+  appId: "1:263798915535:web:58b80e958f10cce30192ba"
+});
+var db = firebase.firestore();
+var POSTS = db.collection('posts');
+
 /* ═══════════════════════════════════
    PASSWORD GATE
    ═══════════════════════════════════ */
@@ -1247,9 +1260,16 @@ function clearApiConfig() {
 
 async function getStorage() {
   try {
-    var resp = await fetch('/api/posts');
-    return await resp.json();
-  } catch(e) { return []; }
+    var snap = await POSTS.orderBy('timestamp', 'desc').get();
+    var posts = [];
+    snap.forEach(function(doc) { posts.push(Object.assign({ id: doc.id }, doc.data())); });
+    return posts;
+  } catch(e) { console.error('getStorage error:', e); return []; }
+}
+
+async function savePostToFirestore(data) {
+  var docRef = await POSTS.add(data);
+  return Object.assign({ id: docRef.id }, data);
 }
 
 function exportData() {
@@ -1280,11 +1300,7 @@ function importData(event) {
       if (valid.length === 0) { showToast('Nenhum post valido encontrado', 'error'); return; }
 
       var promises = valid.map(function(p) {
-        return fetch('/api/posts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(p)
-        });
+        return POSTS.add(p);
       });
 
       Promise.all(promises).then(function() {
@@ -1536,11 +1552,9 @@ function analyzePost() {
     }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
     .then(function(res) {
       if (!res.ok || res.data.error) throw new Error(res.data.error || 'Erro');
-      return fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(res.data)
-      }).then(function(saveResp) { return saveResp.json(); }).then(function(saved) {
+      var postData = res.data;
+      postData.timestamp = new Date().toISOString();
+      return savePostToFirestore(postData).then(function(saved) {
         lastData = saved;
         ok++;
       });
@@ -1555,7 +1569,7 @@ function analyzePost() {
    REFRESH ALL
    ═══════════════════════════════════ */
 
-function refreshAllPosts() {
+async function refreshAllPosts() {
   var status = document.getElementById('refreshStatus');
   var label = document.getElementById('refreshLabel');
   var bar = document.getElementById('refreshBar');
@@ -1565,60 +1579,96 @@ function refreshAllPosts() {
   btn.disabled = true;
   btn.innerHTML = '&#128260; Atualizando...';
   status.style.display = 'block';
-  label.textContent = 'Enviando para o servidor...';
-  detail.textContent = 'Todos os posts serao re-analisados';
-  bar.style.width = '10%';
+  label.textContent = 'Buscando posts...';
+  bar.style.width = '5%';
 
-  fetch('/api/posts/refresh', { method: 'POST' })
-    .then(function(r) { return r.json(); })
-    .then(function(result) {
-      bar.style.width = '100%';
-      label.textContent = 'Concluido!';
-      detail.textContent = (result.updated || 0) + ' atualizados' + (result.errors > 0 ? ', ' + result.errors + ' erro' + (result.errors > 1 ? 's' : '') : '');
-      renderHistory();
-      renderDashboard();
-      showToast((result.updated || 0) + ' posts atualizados!');
-      setTimeout(function() { status.style.display = 'none'; }, 4000);
-    })
-    .catch(function() {
-      bar.style.width = '100%';
-      label.textContent = 'Erro!';
-      detail.textContent = 'Falha ao comunicar com o servidor';
-      showToast('Erro ao atualizar posts', 'error');
-      setTimeout(function() { status.style.display = 'none'; }, 4000);
-    })
-    .finally(function() {
+  try {
+    var snap = await POSTS.get();
+    var docs = [];
+    snap.forEach(function(doc) { docs.push({ ref: doc.ref, data: doc.data() }); });
+
+    if (docs.length === 0) {
+      showToast('Nenhum post para atualizar', 'info');
+      status.style.display = 'none';
       btn.disabled = false;
       btn.innerHTML = '&#128260; Atualizar';
-    });
+      return;
+    }
+
+    var ok = 0, fail = 0;
+    for (var i = 0; i < docs.length; i++) {
+      var item = docs[i];
+      var p = item.data;
+      bar.style.width = ((i + 1) / docs.length * 100) + '%';
+      detail.textContent = p.url || p.title || 'Post';
+      label.textContent = 'Atualizando ' + (i + 1) + '/' + docs.length + '...';
+
+      try {
+        var resp = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: p.url })
+        });
+        var d = await resp.json();
+        if (!resp.ok || d.error) throw new Error();
+
+        await item.ref.update({
+          likes: d.likes, comments: d.comments, views: d.views,
+          views_unavailable: d.views_unavailable || false,
+          saves: d.saves, shares: d.shares, reach: d.reach,
+          caption: d.caption, hashtags: d.hashtags,
+          source: d.source, thumbnailUrl: d.thumbnailUrl,
+          updatedAt: new Date().toISOString()
+        });
+        ok++;
+      } catch(e) { fail++; }
+    }
+
+    bar.style.width = '100%';
+    label.textContent = 'Concluido!';
+    detail.textContent = ok + ' atualizados' + (fail > 0 ? ', ' + fail + ' erro' + (fail > 1 ? 's' : '') : '');
+    await renderHistory();
+    await renderDashboard();
+    showToast(ok + '/' + docs.length + ' posts atualizados!');
+    setTimeout(function() { status.style.display = 'none'; }, 4000);
+  } catch(e) {
+    bar.style.width = '100%';
+    label.textContent = 'Erro!';
+    detail.textContent = 'Falha ao buscar posts';
+    showToast('Erro ao atualizar posts', 'error');
+    setTimeout(function() { status.style.display = 'none'; }, 4000);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '&#128260; Atualizar';
+  }
 }
 
 /* ═══════════════════════════════════
    DELETE / CLEAR
    ═══════════════════════════════════ */
 
-function deletePost(id) {
-  fetch('/api/posts/' + encodeURIComponent(id), { method: 'DELETE' })
-    .then(function() {
-      renderHistory();
-      renderDashboard();
-      showToast('Post removido');
-    });
+async function deletePost(id) {
+  try {
+    await POSTS.doc(id).delete();
+    renderHistory();
+    renderDashboard();
+    showToast('Post removido');
+  } catch(e) { showToast('Erro ao remover', 'error'); }
 }
 
-function clearAll() {
-  getStorage().then(function(posts) {
-    if (posts.length === 0) return;
-    if (confirm('Excluir todos os posts do historico?')) {
-      fetch('/api/posts/clear', { method: 'POST' })
-        .then(function() {
-          renderHistory();
-          renderDashboard();
-          document.getElementById('resultArea').classList.remove('visible');
-          showToast('Historico limpo');
-        });
-    }
-  });
+async function clearAll() {
+  var posts = await getStorage();
+  if (posts.length === 0) return;
+  if (confirm('Excluir todos os posts do historico?')) {
+    var batch = db.batch();
+    var snap = await POSTS.get();
+    snap.forEach(function(doc) { batch.delete(doc.ref); });
+    await batch.commit();
+    renderHistory();
+    renderDashboard();
+    document.getElementById('resultArea').classList.remove('visible');
+    showToast('Historico limpo');
+  }
 }
 
 /* ═══════════════════════════════════
