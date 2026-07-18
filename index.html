@@ -920,6 +920,16 @@
             </div>
           </div>
           <button class="btn-outline danger" id="cfgLogoutBtn" onclick="doLogout()" style="display:none;margin-top:8px">Sair da conta</button>
+
+          <div class="config-divider"><span>dados</span></div>
+
+          <h3 style="margin-top:12px">&#128228; Backup dos Dados</h3>
+          <div class="config-desc">Exporte seus dados analisados e importe em outro dispositivo ou apos o deploy.</div>
+          <div class="config-actions">
+            <button class="btn-outline primary" onclick="exportData()">&#128229; Exportar JSON</button>
+            <button class="btn-outline" onclick="document.getElementById('importFile').click()">&#128228; Importar JSON</button>
+            <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+          </div>
         </div>
       </div>
     </div>
@@ -1583,6 +1593,55 @@ function clearAll() {
     document.getElementById('resultArea').classList.remove('visible');
     showToast('Historico limpo');
   }
+}
+
+/* ═══════════════════════════════════
+   EXPORT / IMPORT
+   ═══════════════════════════════════ */
+
+function exportData() {
+  var posts = getStorage();
+  if (posts.length === 0) { showToast('Nenhum dado para exportar', 'info'); return; }
+  var blob = new Blob([JSON.stringify(posts, null, 2)], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'palavra-de-vida-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(posts.length + ' posts exportados!');
+}
+
+function importData(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var imported = JSON.parse(e.target.result);
+      if (!Array.isArray(imported)) throw new Error('Formato invalido');
+      var valid = imported.filter(function(p) { return p.url; });
+      if (valid.length === 0) { showToast('Nenhum post valido encontrado no arquivo', 'error'); return; }
+
+      var existing = getStorage();
+      var existingUrls = {};
+      existing.forEach(function(p) { existingUrls[p.url] = true; });
+
+      var newPosts = valid.filter(function(p) { return !existingUrls[p.url]; });
+      var merged = newPosts.concat(existing);
+      setStorage(merged);
+
+      renderHistory();
+      renderDashboard();
+      showToast(newPosts.length + ' novos posts importados! (' + existing.length + ' ja existiam)');
+    } catch (err) {
+      showToast('Arquivo invalido: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
 }
 
 /* ═══════════════════════════════════
