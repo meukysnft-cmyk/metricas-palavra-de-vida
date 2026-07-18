@@ -12,6 +12,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 HTML_FILE = os.path.join(BASE_DIR, 'index.html')
 COOKIES_FILE = os.path.join(BASE_DIR, 'cookies.json')
 CONFIG_FILE = os.path.join(BASE_DIR, 'config.json')
+POSTS_FILE = os.path.join(BASE_DIR, 'posts.json')
 
 app = Flask(__name__)
 CORS(app)
@@ -68,6 +69,37 @@ def save_config(access_token, ig_account_id):
 def clear_config():
     if os.path.exists(CONFIG_FILE):
         os.remove(CONFIG_FILE)
+
+
+def load_posts():
+    if os.path.exists(POSTS_FILE):
+        with open(POSTS_FILE, 'r') as f:
+            return json.load(f)
+    return []
+
+
+def save_posts(posts):
+    with open(POSTS_FILE, 'w') as f:
+        json.dump(posts, f)
+
+
+def add_post(post):
+    posts = load_posts()
+    if not post.get('id'):
+        import hashlib
+        post['id'] = hashlib.md5((post.get('url', '') + str(time.time())).encode()).hexdigest()[:12]
+    if not post.get('timestamp'):
+        post['timestamp'] = time.strftime('%Y-%m-%dT%H:%M:%SZ')
+    posts.insert(0, post)
+    save_posts(posts)
+    return posts, post
+
+
+def delete_post_by_id(post_id):
+    posts = load_posts()
+    posts = [p for p in posts if p.get('id') != post_id]
+    save_posts(posts)
+    return posts
 
 
 def graph_api_fetch(media_id, fields):
@@ -259,6 +291,64 @@ def login():
 def logout():
     clear_cookies()
     return jsonify({'ok': True})
+
+
+@app.route('/api/posts', methods=['GET'])
+def get_posts():
+    return jsonify(load_posts())
+
+
+@app.route('/api/posts', methods=['POST'])
+def create_post():
+    post = request.get_json()
+    if not post or not post.get('url'):
+        return jsonify({'error': 'Post invalido'}), 400
+    posts, saved = add_post(post)
+    return jsonify(saved)
+
+
+@app.route('/api/posts/<post_id>', methods=['DELETE'])
+def remove_post(post_id):
+    posts = delete_post_by_id(post_id)
+    return jsonify({'ok': True, 'count': len(posts)})
+
+
+@app.route('/api/posts/clear', methods=['POST'])
+def clear_posts():
+    save_posts([])
+    return jsonify({'ok': True})
+
+
+@app.route('/api/posts/refresh', methods=['POST'])
+def refresh_posts():
+    posts = load_posts()
+    if not posts:
+        return jsonify({'ok': True, 'updated': 0, 'errors': 0})
+
+    ok = 0
+    fail = 0
+    for i, post in enumerate(posts):
+        try:
+            result = scrape_instagram(post['url'])
+            posts[i]['likes'] = result.get('likes')
+            posts[i]['comments'] = result.get('comments')
+            posts[i]['views'] = result.get('views')
+            posts[i]['views_unavailable'] = result.get('views_unavailable', False)
+            posts[i]['saves'] = result.get('saves')
+            posts[i]['shares'] = result.get('shares')
+            posts[i]['reach'] = result.get('reach')
+            posts[i]['caption'] = result.get('caption', '')
+            posts[i]['hashtags'] = result.get('hashtags', [])
+            posts[i]['source'] = result.get('source', 'scraping')
+            posts[i]['thumbnailUrl'] = result.get('thumbnailUrl', '')
+            posts[i]['updatedAt'] = time.strftime('%Y-%m-%dT%H:%M:%SZ')
+            ok += 1
+        except Exception as e:
+            print(f"[refresh] Error refreshing {post.get('url', '?')}: {e}")
+            fail += 1
+
+    save_posts(posts)
+    return jsonify({'ok': True, 'updated': ok, 'errors': fail})
 
 
 @app.route('/api/analyze', methods=['POST'])
