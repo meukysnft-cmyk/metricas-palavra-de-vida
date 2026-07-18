@@ -1,0 +1,1728 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Metricas Palavra de Vida</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-primary: #faf8f4;
+      --bg-secondary: #f3efe8;
+      --bg-card: #ffffff;
+      --bg-card-hover: #fdfcfa;
+      --bg-input: #f5f2ed;
+      --border: #e8e2d8;
+      --border-focus: #c9a84c;
+      --text-primary: #2d2620;
+      --text-secondary: #6b6259;
+      --text-muted: #9b9289;
+      --accent: #9b72cf;
+      --accent-hover: #8359b8;
+      --accent-glow: rgba(155, 114, 207, 0.2);
+      --gold: #c9a84c;
+      --gold-light: #e8d48b;
+      --gold-dark: #a68a3a;
+      --green: #5aad6a;
+      --blue: #5b8ec9;
+      --orange: #d4944a;
+      --red: #c95a5a;
+      --gradient: linear-gradient(135deg, #c9a84c, #9b72cf, #c95a7a);
+      --gradient-gold: linear-gradient(135deg, #c9a84c, #e8d48b);
+      --shadow-sm: 0 1px 6px rgba(45,38,32,0.06);
+      --shadow-md: 0 4px 16px rgba(45,38,32,0.08);
+      --shadow-lg: 0 8px 32px rgba(45,38,32,0.1);
+      --radius: 16px;
+      --radius-sm: 12px;
+      --radius-xs: 8px;
+      --nav-height: 68px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+      padding-bottom: calc(var(--nav-height) + 16px);
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%; left: -50%;
+      width: 200%; height: 200%;
+      background: radial-gradient(circle at 20% 15%, rgba(201,168,76,0.07) 0%, transparent 45%),
+                  radial-gradient(circle at 80% 85%, rgba(155,114,207,0.05) 0%, transparent 45%),
+                  radial-gradient(circle at 50% 50%, rgba(201,90,122,0.03) 0%, transparent 50%);
+      z-index: -1;
+      animation: bgShift 25s ease-in-out infinite alternate;
+    }
+
+    @keyframes bgShift { 0% { transform: translate(0,0); } 100% { transform: translate(-3%,2%); } }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+    header { padding: 32px 0 0; text-align: center; }
+
+    .logo { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+
+    .logo-icon {
+      width: 44px; height: 44px; border-radius: 14px;
+      background: var(--gradient); display: flex; align-items: center; justify-content: center;
+      font-size: 20px; box-shadow: 0 4px 16px rgba(201,168,76,0.25);
+      animation: logoPulse 3s ease-in-out infinite;
+    }
+
+    @keyframes logoPulse {
+      0%, 100% { box-shadow: 0 4px 16px rgba(201,168,76,0.25); }
+      50% { box-shadow: 0 4px 24px rgba(201,168,76,0.4), 0 0 48px rgba(155,114,207,0.15); }
+    }
+
+    .logo-text {
+      font-size: 22px; font-weight: 800;
+      background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; letter-spacing: -0.5px;
+      background-size: 200% 200%; animation: gradientShift 5s ease infinite;
+    }
+
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    header p { color: var(--text-muted); font-size: 13px; }
+
+    /* ═══ PASSWORD GATE ═══ */
+    .password-gate {
+      max-width: 400px; margin: 60px auto 0; text-align: center;
+      animation: slideUp 0.4s ease;
+    }
+
+    .password-gate-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 36px 28px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .password-gate-card .gate-icon { font-size: 40px; margin-bottom: 16px; }
+    .password-gate-card h3 { font-size: 18px; margin-bottom: 6px; color: var(--text-primary); }
+    .password-gate-card p { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+
+    .gate-input-row { display: flex; gap: 8px; max-width: 300px; margin: 0 auto; }
+
+    .gate-input-row input {
+      flex: 1; background: var(--bg-input);
+      border: 1px solid var(--border); border-radius: var(--radius-xs);
+      padding: 12px 16px; color: var(--text-primary); font-size: 15px;
+      font-family: inherit; outline: none; text-align: center; letter-spacing: 4px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .gate-input-row input:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .gate-error { font-size: 12px; color: var(--red); margin-top: 12px; min-height: 18px; }
+
+    /* ═══ HOME CONTENT ═══ */
+    .home-content { display: none; }
+    .home-content.visible { display: block; animation: slideUp 0.4s ease; }
+
+    .input-area { margin: 24px auto 0; max-width: 700px; }
+
+    .input-wrapper {
+      display: flex; gap: 10px; background: var(--bg-card);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 6px; transition: border-color 0.3s, box-shadow 0.3s;
+      box-shadow: var(--shadow-sm);
+    }
+    .input-wrapper:focus-within {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px var(--accent-glow), var(--shadow-md);
+    }
+
+    .input-wrapper textarea {
+      flex: 1; background: transparent; border: none; outline: none;
+      color: var(--text-primary); font-size: 14px; font-family: inherit;
+      padding: 14px 18px; min-width: 0; resize: none;
+      line-height: 1.5; max-height: 200px; overflow-y: auto;
+    }
+    .input-wrapper textarea::placeholder { color: var(--text-muted); }
+
+    .btn-analyze {
+      background: var(--gradient); background-size: 200% 200%;
+      color: #fff; border: none; border-radius: 12px;
+      padding: 14px 28px; font-size: 14px; font-weight: 600;
+      font-family: inherit; cursor: pointer; white-space: nowrap;
+      display: flex; align-items: center; gap: 8px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      animation: gradientShift 5s ease infinite;
+      box-shadow: 0 4px 15px rgba(155,114,207,0.25);
+    }
+    .btn-analyze:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(155,114,207,0.35); }
+    .btn-analyze:active { transform: scale(0.97); }
+    .btn-analyze:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .stats-bar {
+      display: flex; justify-content: center; gap: 20px;
+      margin: 24px auto 0; padding: 14px 0; max-width: 600px; flex-wrap: wrap;
+    }
+
+    .stat-item {
+      text-align: center; padding: 14px 20px;
+      border-radius: var(--radius-sm); background: var(--bg-card);
+      border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+      min-width: 120px;
+    }
+
+    .stat-value {
+      font-size: 26px; font-weight: 700;
+      background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; background-size: 200% 200%;
+      animation: gradientShift 5s ease infinite;
+    }
+
+    .stat-label {
+      font-size: 11px; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 1px; margin-top: 2px;
+    }
+
+    /* ═══ RESULT CARD ═══ */
+    .result-area { margin: 24px auto 0; max-width: 700px; display: none; }
+    .result-area.visible { display: block; animation: slideUp 0.4s ease; }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-lg);
+    }
+
+    .result-card-header { padding: 20px; display: flex; gap: 16px; align-items: flex-start; }
+
+    .post-thumbnail {
+      width: 80px; height: 80px; border-radius: var(--radius-sm);
+      background: var(--bg-input); flex-shrink: 0; overflow: hidden;
+      display: flex; align-items: center; justify-content: center; font-size: 28px;
+    }
+    .post-thumbnail img { width: 100%; height: 100%; object-fit: cover; }
+
+    .post-info { flex: 1; min-width: 0; }
+    .post-info h3 {
+      font-size: 15px; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .post-author { font-size: 13px; color: var(--accent); font-weight: 500; margin-bottom: 4px; }
+    .post-link { color: var(--text-muted); text-decoration: none; font-size: 12px; word-break: break-all; transition: color 0.2s; }
+    .post-link:hover { color: var(--accent); text-decoration: underline; }
+    .post-url-id { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+    .source-badge {
+      display: inline-block; font-size: 10px; padding: 2px 8px;
+      border-radius: 10px; font-weight: 600; vertical-align: middle; margin-left: 6px;
+    }
+    .source-badge.graph-api { background: rgba(91,142,201,0.12); color: var(--blue); }
+    .source-badge.scraping { background: var(--bg-input); color: var(--text-muted); }
+
+    .metrics-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 1px; background: var(--border);
+    }
+    .metrics-grid.expanded { grid-template-columns: repeat(3, 1fr); }
+
+    .metric-cell {
+      background: var(--bg-card); padding: 16px 10px; text-align: center;
+      transition: background 0.2s;
+    }
+    .metric-cell:hover { background: var(--bg-card-hover); }
+
+    .metric-icon { font-size: 18px; margin-bottom: 4px; }
+    .metric-value { font-size: 20px; font-weight: 700; color: var(--text-primary); }
+    .metric-value.unavailable { color: var(--text-muted); font-size: 14px; }
+    .metric-label {
+      font-size: 10px; color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.5px; margin-top: 2px;
+    }
+
+    .caption-section { padding: 18px 20px; border-top: 1px solid var(--border); }
+    .caption-section h4 {
+      font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--text-muted); margin-bottom: 8px;
+    }
+    .caption-text {
+      font-size: 13px; color: var(--text-secondary); line-height: 1.6;
+      white-space: pre-wrap; word-break: break-word; max-height: 100px; overflow-y: auto;
+    }
+    .hashtag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .hashtag-tag {
+      background: rgba(155,114,207,0.1); color: var(--accent);
+      padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500;
+      transition: all 0.2s;
+    }
+    .hashtag-tag:hover { background: rgba(155,114,207,0.18); }
+
+    .analysis-section { padding: 18px 20px; border-top: 1px solid var(--border); }
+    .analysis-section h4 {
+      font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--text-muted); margin-bottom: 12px;
+    }
+    .analysis-grid { display: flex; flex-direction: column; gap: 10px; }
+
+    .analysis-item {
+      background: var(--bg-input); border-radius: var(--radius-xs); padding: 12px 14px;
+    }
+    .analysis-item-label {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px;
+      color: var(--text-muted); margin-bottom: 4px;
+    }
+    .analysis-item-value { font-size: 13px; color: var(--text-primary); font-weight: 500; }
+
+    .analysis-text {
+      background: var(--bg-input); border-radius: var(--radius-xs); padding: 12px 14px;
+    }
+    .analysis-text p { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+    .analysis-note {
+      margin-top: 10px; padding: 8px 12px;
+      background: rgba(91,142,201,0.08); border-radius: var(--radius-xs);
+      font-size: 11px; color: var(--blue);
+    }
+
+    /* ═══ SECTION HEADERS ═══ */
+    .section-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border);
+      flex-wrap: wrap; gap: 10px;
+    }
+
+    .section-title {
+      font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;
+    }
+
+    .section-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .btn-outline {
+      background: var(--bg-card); border: 1px solid var(--border); color: var(--text-muted);
+      padding: 8px 14px; border-radius: var(--radius-xs); font-size: 12px;
+      font-family: inherit; cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow-sm);
+    }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-outline.danger:hover { border-color: var(--red); color: var(--red); }
+    .btn-outline.primary { border-color: var(--gold); color: var(--gold-dark); }
+    .btn-outline.primary:hover { background: rgba(201,168,76,0.08); }
+
+    /* ═══ HISTORY ═══ */
+    .history-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px; margin-bottom: 32px;
+    }
+
+    .history-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); overflow: hidden; box-shadow: var(--shadow-sm);
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    .history-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .history-card-top { display: flex; gap: 10px; padding: 12px; }
+
+    .history-thumb {
+      width: 52px; height: 52px; border-radius: var(--radius-xs);
+      background: var(--bg-input); flex-shrink: 0; overflow: hidden;
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+    }
+    .history-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+    .history-card-info { flex: 1; min-width: 0; }
+    .history-author { font-size: 10px; color: var(--accent); font-weight: 500; }
+    .history-card-info h4 {
+      font-size: 12px; font-weight: 600; margin: 2px 0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .history-card-info a {
+      font-size: 9px; color: var(--text-muted); text-decoration: none; word-break: break-all;
+    }
+    .history-card-info a:hover { color: var(--accent); }
+
+    .history-metrics {
+      display: flex; justify-content: space-around;
+      padding: 8px 10px; border-top: 1px solid var(--border);
+    }
+
+    .history-metric { text-align: center; }
+    .history-metric-value { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+    .history-metric-label {
+      font-size: 8px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px;
+    }
+
+    .history-card-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 6px 10px; border-top: 1px solid var(--border);
+    }
+    .history-engagement { font-size: 9px; color: var(--text-muted); }
+
+    .btn-delete {
+      background: transparent; border: none; color: var(--text-muted);
+      font-size: 12px; cursor: pointer; padding: 3px 6px;
+      border-radius: var(--radius-xs); transition: all 0.2s;
+    }
+    .btn-delete:hover { color: var(--red); background: rgba(201,90,90,0.08); }
+
+    /* ═══ DASHBOARD / RANKING ═══ */
+    .dash-grid {
+      display: grid; grid-template-columns: 1fr;
+      gap: 16px; margin-bottom: 32px;
+    }
+
+    .dash-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow-md);
+    }
+    .dash-card h4 {
+      font-size: 14px; font-weight: 600; margin-bottom: 14px; color: var(--text-primary);
+    }
+
+    .chart-container { position: relative; height: 240px; }
+
+    .rank-controls { margin-bottom: 14px; }
+    .rank-controls select {
+      background: var(--bg-input); color: var(--text-primary);
+      border: 1px solid var(--border); border-radius: var(--radius-xs);
+      padding: 8px 12px; font-size: 13px; font-family: inherit; outline: none; cursor: pointer;
+    }
+
+    .ranking-list {
+      display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: 8px; max-height: 500px; overflow-y: auto;
+    }
+
+    .rank-item {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--bg-input); border: 1px solid transparent;
+      border-radius: var(--radius-xs); padding: 10px;
+      transition: all 0.2s ease;
+    }
+    .rank-item:hover {
+      border-color: var(--gold-light);
+      box-shadow: var(--shadow-md);
+    }
+
+    .rank-thumb {
+      width: 42px; height: 42px; border-radius: 8px; flex-shrink: 0;
+      background: var(--bg-secondary); overflow: hidden;
+      display: flex; align-items: center; justify-content: center; font-size: 16px;
+      cursor: pointer; transition: transform 0.2s; position: relative; text-decoration: none;
+    }
+    .rank-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
+    .rank-thumb:hover { transform: scale(1.1); box-shadow: 0 4px 12px rgba(201,168,76,0.3); }
+    .rank-thumb:hover img { transform: scale(1.15); }
+    .rank-thumb::after {
+      content: '\25B6'; position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.35); color: #fff; font-size: 12px;
+      opacity: 0; transition: opacity 0.2s;
+    }
+    .rank-thumb:hover::after { opacity: 1; }
+
+    .rank-pos {
+      width: 24px; height: 24px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; flex-shrink: 0;
+      background: var(--bg-secondary); color: var(--text-muted);
+    }
+    .rank-pos.gold { background: var(--gradient-gold); color: #fff; box-shadow: 0 2px 8px rgba(201,168,76,0.35); }
+    .rank-pos.silver { background: linear-gradient(135deg, #c0c0c0, #e0e0e0); color: #555; }
+    .rank-pos.bronze { background: linear-gradient(135deg, #cd7f32, #daa06d); color: #fff; }
+
+    .rank-info { flex: 1; min-width: 0; }
+    .rank-title {
+      font-size: 11px; font-weight: 600; color: var(--text-primary);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .rank-author { font-size: 9px; color: var(--accent); }
+    .rank-bar {
+      height: 3px; background: var(--bg-secondary);
+      border-radius: 2px; margin-top: 4px; overflow: hidden;
+    }
+    .rank-bar-fill {
+      height: 100%; border-radius: 2px;
+      background: var(--gradient); transition: width 0.5s ease;
+    }
+
+    .rank-right { text-align: right; flex-shrink: 0; }
+    .rank-value { font-size: 12px; font-weight: 700; color: var(--text-primary); }
+    .rank-pct { font-size: 9px; color: var(--green); font-weight: 600; }
+
+    /* ═══ EMPTY STATE ═══ */
+    .empty-state { text-align: center; padding: 48px 20px; }
+    .empty-icon { font-size: 42px; margin-bottom: 12px; }
+    .empty-state h3 { font-size: 16px; color: var(--text-secondary); margin-bottom: 6px; }
+    .empty-state p { font-size: 13px; color: var(--text-muted); }
+
+    /* ═══ BOTTOM NAV BAR ═══ */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: var(--nav-height);
+      background: rgba(255,255,255,0.88);
+      backdrop-filter: blur(24px) saturate(1.3);
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 500; padding: 0 16px;
+      box-shadow: 0 -2px 20px rgba(45,38,32,0.06);
+    }
+
+    .nav-items {
+      display: flex; gap: 4px; max-width: 480px; width: 100%; justify-content: space-around;
+    }
+
+    .nav-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      background: none; border: none; color: var(--text-muted);
+      font-family: inherit; cursor: pointer; padding: 6px 16px;
+      border-radius: 12px; transition: all 0.25s ease;
+      position: relative; min-width: 60px; -webkit-tap-highlight-color: transparent;
+    }
+    .nav-btn:hover { color: var(--text-secondary); background: rgba(155,114,207,0.06); }
+    .nav-btn.active { color: var(--accent); }
+    .nav-btn.active .nav-indicator { opacity: 1; transform: scaleX(1); }
+    .nav-btn.active .nav-icon { transform: scale(1.1) translateY(-1px); }
+
+    .nav-icon {
+      font-size: 20px; transition: transform 0.25s cubic-bezier(.4,0,.2,1); line-height: 1;
+    }
+    .nav-label {
+      font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .nav-indicator {
+      position: absolute; top: 0; left: 50%; transform: translateX(-50%) scaleX(0);
+      width: 22px; height: 3px; border-radius: 2px;
+      background: var(--gradient); opacity: 0;
+      transition: all 0.25s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* ═══ PAGES ═══ */
+    .page { display: none; animation: pageIn 0.3s ease; }
+    .page.active { display: block; }
+    @keyframes pageIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ═══ CONFIG SECTION ═══ */
+    .config-toggle {
+      display: flex; align-items: center; justify-content: center;
+      gap: 6px; margin: 20px auto 0; max-width: 200px;
+      background: var(--bg-card); border: 1px dashed var(--border);
+      border-radius: var(--radius-xs); padding: 8px 16px;
+      color: var(--text-muted); font-size: 12px; font-family: inherit;
+      cursor: pointer; transition: all 0.2s; width: 100%;
+    }
+    .config-toggle:hover { border-color: var(--accent); color: var(--accent); }
+    .config-toggle.active { border-style: solid; border-color: var(--accent); color: var(--accent); }
+
+    .config-section {
+      display: none; max-width: 700px; margin: 16px auto 0; animation: slideUp 0.3s ease;
+    }
+    .config-section.visible { display: block; }
+
+    .config-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 20px; box-shadow: var(--shadow-md);
+    }
+    .config-card h3 {
+      font-size: 15px; font-weight: 700; margin-bottom: 4px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .config-card .config-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5; }
+
+    .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .config-field { display: flex; flex-direction: column; gap: 4px; }
+    .config-field.full { grid-column: 1 / -1; }
+    .config-field label {
+      font-size: 10px; font-weight: 600; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.6px;
+    }
+    .config-field input {
+      width: 100%; background: var(--bg-input); border: 1px solid var(--border);
+      border-radius: var(--radius-xs); padding: 10px 12px;
+      color: var(--text-primary); font-size: 13px; font-family: inherit;
+      outline: none; transition: border-color 0.2s;
+    }
+    .config-field input:focus {
+      border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .config-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+    .btn-save {
+      background: var(--gradient-gold); color: #fff; border: none;
+      border-radius: var(--radius-xs); padding: 10px 20px;
+      font-size: 13px; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(201,168,76,0.3);
+    }
+    .btn-save:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(201,168,76,0.4); }
+
+    .config-status {
+      margin-top: 10px; padding: 8px 12px;
+      border-radius: var(--radius-xs); font-size: 12px;
+    }
+    .config-status.ok { background: rgba(90,173,106,0.1); color: var(--green); }
+    .config-status.err { background: rgba(201,90,90,0.1); color: var(--red); }
+
+    .config-divider {
+      display: flex; align-items: center; gap: 10px; margin: 16px 0 0;
+      font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;
+    }
+    .config-divider::before, .config-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    .login-inline { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+    .login-inline input {
+      width: 100%; background: var(--bg-input); border: 1px solid var(--border);
+      border-radius: var(--radius-xs); padding: 10px 12px;
+      color: var(--text-primary); font-size: 13px; font-family: inherit; outline: none;
+    }
+    .login-inline input:focus { border-color: var(--border-focus); }
+    .login-inline .config-actions { margin-top: 0; }
+
+    .login-status-line {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--text-muted); margin-bottom: 8px;
+    }
+
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .status-dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .status-dot.offline { background: var(--text-muted); }
+
+    /* ═══ PROGRESS ═══ */
+    .batch-progress { margin: 14px auto 0; max-width: 700px; display: none; }
+    .batch-progress.visible { display: block; animation: slideUp 0.3s ease; }
+
+    .progress-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 6px; font-size: 12px; color: var(--text-secondary);
+    }
+    .progress-bar-outer {
+      height: 5px; background: var(--bg-secondary); border-radius: 3px; overflow: hidden;
+    }
+    .progress-bar-inner {
+      height: 100%; border-radius: 3px; background: var(--gradient);
+      background-size: 300% 100%;
+      animation: progressGradient 2s linear infinite; transition: width 0.4s ease;
+    }
+    @keyframes progressGradient { 0% { background-position: 0% 50%; } 100% { background-position: 300% 50%; } }
+    .progress-detail { font-size: 11px; color: var(--text-muted); margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+      border-radius: 50%; animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ═══ TOAST ═══ */
+    .toast-container {
+      position: fixed; top: 16px; right: 16px; z-index: 1000;
+      display: flex; flex-direction: column; gap: 8px; max-width: calc(100vw - 32px);
+    }
+    .toast {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px 18px; font-size: 13px;
+      color: var(--text-primary); box-shadow: var(--shadow-lg);
+      animation: toastIn 0.4s ease, toastOut 0.3s ease 2.7s forwards;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .toast.success { border-left: 3px solid var(--green); }
+    .toast.error { border-left: 3px solid var(--red); }
+    .toast.info { border-left: 3px solid var(--blue); }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-10px); } }
+
+    /* ═══ SCROLLBAR / SELECTION ═══ */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    ::selection { background: rgba(155,114,207,0.2); }
+
+    /* ═══ RESPONSIVE ═══ */
+    @media (min-width: 768px) {
+      .dash-grid { grid-template-columns: repeat(2, 1fr); }
+      .dash-card.full-width { grid-column: 1 / -1; }
+    }
+
+    @media (min-width: 1024px) {
+      .logo-text { font-size: 26px; }
+      .logo-icon { width: 48px; height: 48px; font-size: 22px; }
+      .metrics-grid.expanded { grid-template-columns: repeat(6, 1fr); }
+    }
+
+    @media (max-width: 767px) {
+      .container { padding: 0 14px; }
+      header { padding-top: 24px; }
+      .logo-text { font-size: 18px; }
+      .logo-icon { width: 36px; height: 36px; font-size: 16px; border-radius: 10px; }
+      .logo { gap: 10px; }
+      header p { font-size: 12px; }
+
+      .input-wrapper { flex-direction: column; padding: 8px; }
+      .btn-analyze { justify-content: center; width: 100%; padding: 14px; }
+
+      .stats-bar { gap: 10px; }
+      .stat-item { min-width: 90px; padding: 10px 12px; }
+      .stat-value { font-size: 20px; }
+      .stat-label { font-size: 9px; }
+
+      .result-card-header { flex-direction: column; align-items: center; text-align: center; }
+      .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+      .metrics-grid.expanded { grid-template-columns: repeat(2, 1fr); }
+
+      .history-grid { grid-template-columns: repeat(2, 1fr); }
+
+      .ranking-list { grid-template-columns: 1fr; }
+
+      .section-header { flex-direction: column; align-items: flex-start; }
+      .section-actions { width: 100%; }
+      .section-actions .btn-outline { flex: 1; justify-content: center; }
+
+      .dash-card { padding: 16px; }
+      .chart-container { height: 200px; }
+
+      .config-grid { grid-template-columns: 1fr; }
+      .config-card { padding: 16px; }
+
+      .gate-input-row { flex-direction: column; }
+      .gate-input-row button { width: 100%; justify-content: center; }
+      .password-gate { margin-top: 40px; }
+      .password-gate-card { padding: 28px 20px; }
+
+      .toast-container { top: 12px; right: 12px; }
+
+      .nav-label { font-size: 8px; }
+      .nav-icon { font-size: 18px; }
+    }
+
+    @media (max-width: 480px) {
+      .history-grid { grid-template-columns: 1fr; }
+      .nav-btn { padding: 6px 10px; min-width: 52px; }
+    }
+
+    @media (max-width: 380px) {
+      .nav-label { font-size: 7px; }
+      .nav-icon { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">&#127925;</div>
+      <div class="logo-text">Metricas Palavra de Vida</div>
+    </div>
+    <p>Analise e organize suas publicacoes do Instagram</p>
+  </header>
+
+  <!-- ═══ PAGE: HOME ═══ -->
+  <div class="page active" id="page-home">
+
+    <div class="password-gate" id="passwordGate">
+      <div class="password-gate-card">
+        <div class="gate-icon">&#128274;</div>
+        <h3>Acesso Restrito</h3>
+        <p>Digite a senha para acessar as analises</p>
+        <div class="gate-input-row">
+          <input type="password" id="gatePassword" placeholder="Senha" maxlength="20"
+                 onkeydown="if(event.key==='Enter')checkGate()">
+          <button class="btn-analyze" onclick="checkGate()" style="padding:12px 20px">Entrar</button>
+        </div>
+        <div class="gate-error" id="gateError"></div>
+      </div>
+    </div>
+
+    <div class="home-content" id="homeContent">
+
+      <div class="input-area">
+        <div class="input-wrapper">
+          <textarea id="urlInput" placeholder="Cole URLs do Instagram (uma por linha). Ctrl+Enter para analisar..." autocomplete="off" rows="1"></textarea>
+          <button class="btn-analyze" id="analyzeBtn" onclick="analyzePost()">
+            <span id="btnLabel">Analisar</span>
+            <span id="btnSpinner" class="spinner" style="display:none"></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="batch-progress" id="batchProgress">
+        <div class="progress-header">
+          <span id="progressLabel">Analisando...</span>
+          <span id="progressCount">0/0</span>
+        </div>
+        <div class="progress-bar-outer">
+          <div class="progress-bar-inner" id="progressBar" style="width:0%"></div>
+        </div>
+        <div class="progress-detail" id="progressDetail"></div>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat-item">
+          <div class="stat-value" id="statTotal">0</div>
+          <div class="stat-label">Analisados</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="statAvgEngagement">-</div>
+          <div class="stat-label">Engajamento</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="statTotalLikes">0</div>
+          <div class="stat-label">Curtidas</div>
+        </div>
+      </div>
+
+      <div class="result-area" id="resultArea">
+        <div class="result-card">
+          <div class="result-card-header">
+            <div class="post-thumbnail" id="resultThumb">&#128248;</div>
+            <div class="post-info">
+              <div class="post-author" id="resultAuthor"></div>
+              <h3 id="resultTitle">Publicacao Analisada</h3>
+              <a class="post-link" id="resultLink" href="#" target="_blank" rel="noopener"></a>
+              <div class="post-url-id" id="resultId"></div>
+            </div>
+          </div>
+          <div class="metrics-grid" id="metricsGrid">
+            <div class="metric-cell">
+              <div class="metric-icon">&#10084;&#65039;</div>
+              <div class="metric-value" id="resultLikes">-</div>
+              <div class="metric-label">Curtidas</div>
+            </div>
+            <div class="metric-cell">
+              <div class="metric-icon">&#128172;</div>
+              <div class="metric-value" id="resultComments">-</div>
+              <div class="metric-label">Comentarios</div>
+            </div>
+            <div class="metric-cell">
+              <div class="metric-icon">&#128065;&#65039;</div>
+              <div class="metric-value" id="resultViews">-</div>
+              <div class="metric-label" id="resultViewsLabel">Visualizacoes</div>
+            </div>
+            <div class="metric-cell">
+              <div class="metric-icon">&#127991;&#65039;</div>
+              <div class="metric-value" id="resultHashtagCount">0</div>
+              <div class="metric-label">Hashtags</div>
+            </div>
+            <div class="metric-cell" id="cellSaves" style="display:none">
+              <div class="metric-icon">&#128278;</div>
+              <div class="metric-value" id="resultSaves">-</div>
+              <div class="metric-label">Saves</div>
+            </div>
+            <div class="metric-cell" id="cellShares" style="display:none">
+              <div class="metric-icon">&#128260;</div>
+              <div class="metric-value" id="resultShares">-</div>
+              <div class="metric-label">Shares</div>
+            </div>
+            <div class="metric-cell" id="cellReach" style="display:none">
+              <div class="metric-icon">&#128225;</div>
+              <div class="metric-value" id="resultReach">-</div>
+              <div class="metric-label">Alcance</div>
+            </div>
+          </div>
+          <div class="caption-section">
+            <h4>Legenda</h4>
+            <div class="caption-text" id="resultCaption">-</div>
+            <div class="hashtag-list" id="resultHashtags"></div>
+          </div>
+          <div class="analysis-section">
+            <h4>Analise de Conteudo</h4>
+            <div class="analysis-grid">
+              <div class="analysis-item">
+                <div class="analysis-item-label">Tipo de Conteudo</div>
+                <div class="analysis-item-value" id="resultType">-</div>
+              </div>
+              <div class="analysis-item">
+                <div class="analysis-item-label">Autor</div>
+                <div class="analysis-item-value" id="resultAuthorAnalysis">-</div>
+              </div>
+              <div class="analysis-text">
+                <div class="analysis-item-label" style="margin-bottom:4px">Resumo</div>
+                <p id="resultContentAnalysis"></p>
+                <div class="analysis-note" id="resultNote">
+                  Dados extraidos do embed do Instagram. Para dados completos, configure a Graph API abaixo.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">&#128269;</div>
+        <h3>Nenhuma publicacao analisada ainda</h3>
+        <p>Cole uma URL do Instagram acima para comecar</p>
+      </div>
+
+      <button class="config-toggle" id="configToggle" onclick="toggleConfig()">
+        &#9881;&#65039; Configuracoes
+      </button>
+
+      <div class="config-section" id="configSection">
+        <div class="config-card">
+          <h3>&#128279; Graph API do Instagram</h3>
+          <div class="config-desc">Configure sua API para obter metricas completas: views, saves, shares e alcance.</div>
+          <div class="config-grid">
+            <div class="config-field full">
+              <label>Access Token</label>
+              <input type="password" id="cfgApiToken" placeholder="Cole seu access token aqui...">
+            </div>
+            <div class="config-field full">
+              <label>Instagram Business Account ID</label>
+              <input type="text" id="cfgApiAccountId" placeholder="Ex: 17841400123456789">
+            </div>
+          </div>
+          <div class="config-status" id="cfgApiStatus" style="display:none"></div>
+          <div class="config-actions">
+            <button class="btn-outline danger" id="cfgApiClearBtn" onclick="clearApiConfig()" style="display:none">Desligar API</button>
+            <button class="btn-save" id="cfgApiSaveBtn" onclick="saveApiConfig()">Salvar</button>
+          </div>
+
+          <div class="config-divider"><span>ou</span></div>
+
+          <h3 style="margin-top:12px">&#128272; Login Instagram</h3>
+          <div class="config-desc">Login basico para dados do post (likes/comentarios).</div>
+          <div class="login-status-line">
+            <span class="status-dot offline" id="cfgStatusDot"></span>
+            <span id="cfgStatusText">Sem login</span>
+          </div>
+          <div class="login-inline" id="cfgLoginForm">
+            <input type="text" id="cfgLoginUser" placeholder="Usuario ou email" autocomplete="username">
+            <input type="password" id="cfgLoginPass" placeholder="Senha" autocomplete="current-password">
+            <div class="config-actions">
+              <button class="btn-analyze" onclick="doLogin()" id="cfgLoginBtn" style="padding:10px 20px;font-size:13px">
+                <span id="cfgLoginBtnLabel">Entrar</span>
+                <span id="cfgLoginSpinner" class="spinner" style="display:none"></span>
+              </button>
+            </div>
+          </div>
+          <button class="btn-outline danger" id="cfgLogoutBtn" onclick="doLogout()" style="display:none;margin-top:8px">Sair da conta</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: MELHORES VIDEOS ═══ -->
+  <div class="page" id="page-dashboard">
+    <div class="section-header">
+      <div class="section-title"><span>&#127942;</span> Melhores Videos</div>
+    </div>
+    <div class="dash-grid">
+      <div class="dash-card full-width">
+        <h4>Ranking por Engajamento</h4>
+        <div class="rank-controls">
+          <select id="rankMetric" onchange="renderRanking()">
+            <option value="engagement">Engajamento %</option>
+            <option value="likes">Curtidas</option>
+            <option value="views">Visualizacoes</option>
+            <option value="comments">Comentarios</option>
+            <option value="reach">Alcance</option>
+          </select>
+        </div>
+        <div id="rankingList" class="ranking-list"></div>
+      </div>
+      <div class="dash-card">
+        <h4>Engajamento por Post</h4>
+        <div class="chart-container"><canvas id="chartEngagement"></canvas></div>
+      </div>
+      <div class="dash-card">
+        <h4>Metricas Comparadas</h4>
+        <div class="chart-container"><canvas id="chartMetrics"></canvas></div>
+      </div>
+      <div class="dash-card">
+        <h4>Distribuicao</h4>
+        <div class="chart-container"><canvas id="chartDistrib"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: HISTORICO ═══ -->
+  <div class="page" id="page-history">
+    <div class="section-header">
+      <div class="section-title"><span>&#128194;</span> Historico</div>
+      <div class="section-actions">
+        <button class="btn-outline primary" id="refreshAllBtn" onclick="refreshAllPosts()">
+          &#128260; Atualizar
+        </button>
+        <button class="btn-outline danger" onclick="clearAll()">
+          Limpar Tudo
+        </button>
+      </div>
+    </div>
+
+    <div id="refreshStatus" style="display:none;margin-bottom:16px">
+      <div class="progress-header">
+        <span id="refreshLabel">Atualizando...</span>
+        <span id="refreshCount">0/0</span>
+      </div>
+      <div class="progress-bar-outer">
+        <div class="progress-bar-inner" id="refreshBar" style="width:0%"></div>
+      </div>
+      <div class="progress-detail" id="refreshDetail"></div>
+    </div>
+
+    <div class="history-grid" id="historyGrid"></div>
+    <div class="empty-state" id="historyEmpty" style="display:none">
+      <div class="empty-icon">&#128194;</div>
+      <h3>Nenhum post no historico</h3>
+      <p>Analise posts na aba Home para comecar</p>
+    </div>
+  </div>
+</div>
+
+<nav class="bottom-nav">
+  <div class="nav-items">
+    <button class="nav-btn active" data-page="home" onclick="switchPage('home')">
+      <div class="nav-indicator"></div>
+      <div class="nav-icon">&#128274;</div>
+      <div class="nav-label">Emerson</div>
+    </button>
+    <button class="nav-btn" data-page="dashboard" onclick="switchPage('dashboard')">
+      <div class="nav-indicator"></div>
+      <div class="nav-icon">&#127942;</div>
+      <div class="nav-label">Melhores</div>
+    </button>
+    <button class="nav-btn" data-page="history" onclick="switchPage('history')">
+      <div class="nav-indicator"></div>
+      <div class="nav-icon">&#128194;</div>
+      <div class="nav-label">Historico</div>
+    </button>
+  </div>
+</nav>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+var loggedIn = false;
+var apiConfigured = false;
+var homeUnlocked = false;
+
+/* ═══════════════════════════════════
+   PASSWORD GATE
+   ═══════════════════════════════════ */
+
+var GATE_PASSWORD = '99429942';
+
+function checkGate() {
+  var input = document.getElementById('gatePassword');
+  var err = document.getElementById('gateError');
+  if (input.value.trim() === GATE_PASSWORD) {
+    homeUnlocked = true;
+    document.getElementById('passwordGate').style.display = 'none';
+    document.getElementById('homeContent').classList.add('visible');
+    input.value = '';
+    err.textContent = '';
+  } else {
+    err.textContent = 'Senha incorreta';
+    input.value = '';
+    input.focus();
+    input.style.borderColor = '#c95a5a';
+    setTimeout(function() { input.style.borderColor = ''; err.textContent = ''; }, 2000);
+  }
+}
+
+function lockHome() {
+  homeUnlocked = false;
+  document.getElementById('homeContent').classList.remove('visible');
+  document.getElementById('passwordGate').style.display = 'block';
+  document.getElementById('gatePassword').value = '';
+  document.getElementById('gateError').textContent = '';
+}
+
+/* ═══════════════════════════════════
+   PAGE NAVIGATION
+   ═══════════════════════════════════ */
+
+function switchPage(page) {
+  var wasHome = document.querySelector('.page.active') && document.querySelector('.page.active').id === 'page-home';
+
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
+
+  var target = document.getElementById('page-' + page);
+  if (target) {
+    target.classList.add('active');
+    target.style.animation = 'none';
+    target.offsetHeight;
+    target.style.animation = '';
+  }
+  var btn = document.querySelector('.nav-btn[data-page="' + page + '"]');
+  if (btn) btn.classList.add('active');
+
+  if (page !== 'home') {
+    lockHome();
+  }
+
+  if (page === 'dashboard') renderDashboard();
+  else if (page === 'history') renderHistory();
+}
+
+/* ═══════════════════════════════════
+   CONFIG TOGGLE
+   ═══════════════════════════════════ */
+
+function toggleConfig() {
+  var section = document.getElementById('configSection');
+  var toggle = document.getElementById('configToggle');
+  if (section.classList.contains('visible')) {
+    section.classList.remove('visible');
+    toggle.classList.remove('active');
+  } else {
+    section.classList.add('visible');
+    toggle.classList.add('active');
+    loadConfigData();
+  }
+}
+
+function loadConfigData() {
+  fetch('/api/config').then(function(r) { return r.json(); }).then(function(data) {
+    var st = document.getElementById('cfgApiStatus');
+    var clrBtn = document.getElementById('cfgApiClearBtn');
+    var tokenInput = document.getElementById('cfgApiToken');
+    var idInput = document.getElementById('cfgApiAccountId');
+    if (data.configured) {
+      st.style.display = 'block';
+      st.className = 'config-status ok';
+      st.textContent = 'Graph API ativa — ID: ' + data.ig_account_id;
+      clrBtn.style.display = 'inline-block';
+      idInput.value = data.ig_account_id || '';
+      tokenInput.value = '';
+      tokenInput.placeholder = 'Token configurado (' + (data.token_preview || '****') + ')';
+    } else {
+      st.style.display = 'none';
+      clrBtn.style.display = 'none';
+      idInput.value = '';
+      tokenInput.value = '';
+      tokenInput.placeholder = 'Cole seu access token aqui...';
+    }
+  }).catch(function() {});
+}
+
+/* ═══════════════════════════════════
+   LOGIN / LOGOUT
+   ═══════════════════════════════════ */
+
+function doLogin() {
+  var user = document.getElementById('cfgLoginUser').value.trim();
+  var pass = document.getElementById('cfgLoginPass').value.trim();
+  if (!user || !pass) { showToast('Preencha usuario e senha', 'error'); return; }
+
+  var btn = document.getElementById('cfgLoginBtn');
+  var label = document.getElementById('cfgLoginBtnLabel');
+  var spinner = document.getElementById('cfgLoginSpinner');
+  btn.disabled = true; label.textContent = 'Entrando...'; spinner.style.display = 'inline-block';
+
+  fetch('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: user, password: pass })
+  }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+  .then(function(res) {
+    if (!res.ok || res.data.error) throw new Error(res.data.error || 'Erro no login');
+    loggedIn = true;
+    updateLoginUI(true, res.data.username);
+    showToast('Login realizado!');
+  }).catch(function(err) { showToast(err.message, 'error'); })
+  .finally(function() {
+    btn.disabled = false; label.textContent = 'Entrar'; spinner.style.display = 'none';
+  });
+}
+
+function doLogout() {
+  fetch('/api/logout', { method: 'POST' }).then(function() {
+    loggedIn = false;
+    updateLoginUI(false, '');
+    showToast('Logout realizado');
+  });
+}
+
+function updateLoginUI(logged, username) {
+  var dot = document.getElementById('cfgStatusDot');
+  var text = document.getElementById('cfgStatusText');
+  var logoutBtn = document.getElementById('cfgLogoutBtn');
+  var loginForm = document.getElementById('cfgLoginForm');
+  if (logged) {
+    dot.className = 'status-dot online';
+    text.textContent = 'Logado como @' + username;
+    text.style.color = '#5aad6a';
+    logoutBtn.style.display = 'inline-block';
+    loginForm.style.display = 'none';
+  } else {
+    dot.className = 'status-dot offline';
+    text.textContent = 'Sem login';
+    text.style.color = '';
+    logoutBtn.style.display = 'none';
+    loginForm.style.display = 'flex';
+  }
+}
+
+function checkLoginStatus() {
+  fetch('/api/status').then(function(r) { return r.json(); }).then(function(data) {
+    loggedIn = data.logged_in;
+    apiConfigured = data.api_configured;
+    updateLoginUI(data.logged_in, data.username || '');
+  }).catch(function() {});
+}
+
+/* ═══════════════════════════════════
+   API CONFIG
+   ═══════════════════════════════════ */
+
+function saveApiConfig() {
+  var token = document.getElementById('cfgApiToken').value.trim();
+  var accountId = document.getElementById('cfgApiAccountId').value.trim();
+  if (!token || !accountId) { showToast('Preencha token e account ID', 'error'); return; }
+
+  var btn = document.getElementById('cfgApiSaveBtn');
+  btn.disabled = true; btn.textContent = 'Validando...';
+
+  fetch('/api/setup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ access_token: token, ig_account_id: accountId })
+  }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+  .then(function(res) {
+    if (!res.ok || res.data.error) throw new Error(res.data.error || 'Erro ao salvar');
+    apiConfigured = true;
+    loadConfigData();
+    showToast('Graph API configurada!');
+  }).catch(function(err) {
+    var st = document.getElementById('cfgApiStatus');
+    st.style.display = 'block';
+    st.className = 'config-status err';
+    st.textContent = err.message;
+  }).finally(function() {
+    btn.disabled = false; btn.textContent = 'Salvar';
+  });
+}
+
+function clearApiConfig() {
+  fetch('/api/setup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'clear' })
+  }).then(function() {
+    apiConfigured = false;
+    loadConfigData();
+    showToast('Graph API desligada');
+  }).catch(function() {});
+}
+
+/* ═══════════════════════════════════
+   STORAGE & HELPERS
+   ═══════════════════════════════════ */
+
+function getStorage() {
+  try { return JSON.parse(localStorage.getItem('instaAnalyzerPosts') || '[]'); }
+  catch(e) { return []; }
+}
+
+function setStorage(posts) {
+  localStorage.setItem('instaAnalyzerPosts', JSON.stringify(posts));
+}
+
+function formatNumber(n) {
+  if (n == null || isNaN(n)) return '-';
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+  return n.toString();
+}
+
+function generateAnalysis(data) {
+  var hashtags = data.hashtags || [];
+  var caption = data.caption || '';
+  var type = data.type || 'Post';
+  var author = data.author || 'desconhecido';
+  var analysis = 'Publicacao do tipo **' + type + '** criada por **@' + author + '**. ';
+  if (caption.length > 0) {
+    analysis += 'A legenda possui ' + caption.split(/\s+/).length + ' palavras. ';
+  }
+  if (hashtags.length > 0) {
+    analysis += hashtags.length + ' hashtag(s): ' + hashtags.slice(0, 5).join(', ');
+    if (hashtags.length > 5) analysis += ' e mais ' + (hashtags.length - 5);
+    analysis += '. ';
+  } else {
+    analysis += 'Nenhuma hashtag detectada. ';
+  }
+  analysis += data.source === 'graph_api' ? 'Dados via Graph API (completos).' : 'Dados do embed publico. Configure Graph API para completos.';
+  return analysis;
+}
+
+function showToast(msg, type) {
+  type = type || 'success';
+  var c = document.getElementById('toastContainer');
+  var t = document.createElement('div');
+  t.className = 'toast ' + type;
+  var icons = { success: '\u2705', error: '\u274C', info: '\u2139\uFE0F' };
+  t.innerHTML = (icons[type] || '\u2705') + ' ' + msg;
+  c.appendChild(t);
+  setTimeout(function() { t.remove(); }, 3200);
+}
+
+/* ═══════════════════════════════════
+   SHOW RESULT
+   ═══════════════════════════════════ */
+
+function showResult(data) {
+  var area = document.getElementById('resultArea');
+
+  if (data.thumbnailUrl) {
+    document.getElementById('resultThumb').innerHTML = '<img src="' + data.thumbnailUrl.replace(/&amp;/g, '&') + '" alt="" onerror="this.parentElement.textContent=\'\uD83D\uDCF8\'">';
+  } else {
+    document.getElementById('resultThumb').textContent = '\uD83D\uDCF8';
+  }
+
+  document.getElementById('resultAuthor').textContent = data.author ? '@' + data.author : '';
+  var titleEl = document.getElementById('resultTitle');
+  titleEl.textContent = '';
+  titleEl.appendChild(document.createTextNode((data.title || 'Publicacao Analisada') + ' '));
+  var sb = document.createElement('span');
+  sb.className = 'source-badge ' + (data.source === 'graph_api' ? 'graph-api' : 'scraping');
+  sb.textContent = data.source === 'graph_api' ? 'Graph API' : 'Scraping';
+  titleEl.appendChild(sb);
+
+  document.getElementById('resultLink').textContent = data.url;
+  document.getElementById('resultLink').href = data.url;
+  document.getElementById('resultId').textContent = 'Tipo: ' + (data.type || 'Post') + ' | ID: ' + (data.postId || '-');
+
+  document.getElementById('resultLikes').textContent = data.likes != null ? formatNumber(data.likes) : '-';
+  document.getElementById('resultComments').textContent = data.comments != null ? formatNumber(data.comments) : '-';
+  var viewsEl = document.getElementById('resultViews');
+  if (data.views != null) {
+    viewsEl.textContent = formatNumber(data.views);
+    viewsEl.className = 'metric-value';
+  } else {
+    viewsEl.textContent = data.views_unavailable ? 'N/D' : '-';
+    viewsEl.className = data.views_unavailable ? 'metric-value unavailable' : 'metric-value';
+  }
+  document.getElementById('resultViewsLabel').textContent = data.views != null ? 'Visualizacoes' : (data.views_unavailable ? 'N/D (web)' : 'Visualizacoes');
+  document.getElementById('resultHashtagCount').textContent = (data.hashtags || []).length;
+
+  var grid = document.getElementById('metricsGrid');
+  if (data.source === 'graph_api') {
+    grid.classList.add('expanded');
+    document.getElementById('cellSaves').style.display = '';
+    document.getElementById('cellShares').style.display = '';
+    document.getElementById('cellReach').style.display = '';
+    document.getElementById('resultSaves').textContent = data.saves != null ? formatNumber(data.saves) : '-';
+    document.getElementById('resultShares').textContent = data.shares != null ? formatNumber(data.shares) : '-';
+    document.getElementById('resultReach').textContent = data.reach != null ? formatNumber(data.reach) : '-';
+  } else {
+    grid.classList.remove('expanded');
+    document.getElementById('cellSaves').style.display = 'none';
+    document.getElementById('cellShares').style.display = 'none';
+    document.getElementById('cellReach').style.display = 'none';
+  }
+
+  document.getElementById('resultCaption').textContent = data.caption || 'Legenda nao disponivel';
+  document.getElementById('resultType').textContent = data.type || 'Post';
+  document.getElementById('resultAuthorAnalysis').textContent = data.author ? '@' + data.author : '-';
+  document.getElementById('resultContentAnalysis').textContent = generateAnalysis(data);
+
+  var hc = document.getElementById('resultHashtags');
+  hc.innerHTML = '';
+  (data.hashtags || []).forEach(function(tag) {
+    var s = document.createElement('span');
+    s.className = 'hashtag-tag';
+    s.textContent = tag;
+    hc.appendChild(s);
+  });
+
+  area.classList.add('visible');
+  area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+/* ═══════════════════════════════════
+   HISTORY
+   ═══════════════════════════════════ */
+
+function renderHistory() {
+  var posts = getStorage();
+  var grid = document.getElementById('historyGrid');
+  var empty = document.getElementById('historyEmpty');
+  document.getElementById('statTotal').textContent = posts.length;
+
+  if (posts.length === 0) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    document.getElementById('statAvgEngagement').textContent = '-';
+    document.getElementById('statTotalLikes').textContent = '0';
+    return;
+  }
+
+  empty.style.display = 'none';
+  var pwl = posts.filter(function(p) { return p.likes != null; });
+  if (pwl.length > 0) {
+    var tl = pwl.reduce(function(s, p) { return s + p.likes; }, 0);
+    var tc = posts.filter(function(p) { return p.comments != null; }).reduce(function(s, p) { return s + p.comments; }, 0);
+    document.getElementById('statTotalLikes').textContent = formatNumber(tl);
+    document.getElementById('statAvgEngagement').textContent = formatNumber(tc) + ' com.';
+  } else {
+    document.getElementById('statTotalLikes').textContent = '-';
+    document.getElementById('statAvgEngagement').textContent = '-';
+  }
+
+  grid.innerHTML = posts.map(function(p) {
+    return '<div class="history-card" data-id="' + p.id + '">' +
+      '<div class="history-card-top">' +
+        '<div class="history-thumb">' +
+          (p.thumbnailUrl ? '<a href="' + p.url + '" target="_blank"><img src="' + p.thumbnailUrl.replace(/&amp;/g, '&') + '" alt="" onerror="this.parentElement.textContent=\'\uD83D\uDCF8\'"></a>' : '\uD83D\uDCF8') +
+        '</div>' +
+        '<div class="history-card-info">' +
+          (p.author ? '<div class="history-author">@' + p.author + '</div>' : '') +
+          '<h4>' + (p.title || p.postId || 'Post') + '</h4>' +
+          '<a href="' + p.url + '" target="_blank">' + (p.url.length > 35 ? p.url.substring(0, 35) + '...' : p.url) + '</a>' +
+        '</div>' +
+      '</div>' +
+      '<div class="history-metrics">' +
+        '<div class="history-metric"><div class="history-metric-value">' + (p.likes != null ? formatNumber(p.likes) : '-') + '</div><div class="history-metric-label">Curtidas</div></div>' +
+        '<div class="history-metric"><div class="history-metric-value">' + (p.comments != null ? formatNumber(p.comments) : '-') + '</div><div class="history-metric-label">Coment.</div></div>' +
+        '<div class="history-metric"><div class="history-metric-value">' + (p.views != null ? formatNumber(p.views) : (p.views_unavailable ? 'N/D' : '-')) + '</div><div class="history-metric-label">Views</div></div>' +
+        '<div class="history-metric"><div class="history-metric-value">' + (p.hashtags || []).length + '</div><div class="history-metric-label">Tags</div></div>' +
+      '</div>' +
+      '<div class="history-card-footer">' +
+        '<div class="history-engagement">' + (p.type || 'Post') + ' \u00B7 @' + (p.author || '?') + (p.source === 'graph_api' ? ' <span class="source-badge graph-api" style="margin-left:4px">API</span>' : '') + '</div>' +
+        '<button class="btn-delete" onclick="deletePost(\'' + p.id + '\')">\u2715</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+/* ═══════════════════════════════════
+   ANALYZE
+   ═══════════════════════════════════ */
+
+function analyzePost() {
+  var input = document.getElementById('urlInput');
+  var raw = input.value.trim();
+  if (!raw) { showToast('Cole URLs do Instagram', 'error'); input.focus(); return; }
+
+  var urls = raw.split(/\n+/).map(function(l) { return l.trim(); }).filter(function(l) { return l.includes('instagram.com'); });
+  if (urls.length === 0) { showToast('Nenhuma URL valida encontrada', 'error'); return; }
+
+  var btn = document.getElementById('analyzeBtn');
+  var label = document.getElementById('btnLabel');
+  var spinner = document.getElementById('btnSpinner');
+  var prog = document.getElementById('batchProgress');
+  var progLabel = document.getElementById('progressLabel');
+  var progCount = document.getElementById('progressCount');
+  var progBar = document.getElementById('progressBar');
+  var progDetail = document.getElementById('progressDetail');
+
+  btn.disabled = true;
+  spinner.style.display = 'inline-block';
+
+  if (urls.length > 1) {
+    prog.classList.add('visible');
+    label.textContent = 'Analisando ' + urls.length + '...';
+  } else {
+    label.textContent = 'Analisando...';
+  }
+
+  var ok = 0, fail = 0, lastData = null;
+  var i = 0;
+
+  function processNext() {
+    if (i >= urls.length) {
+      if (lastData) showResult(lastData);
+      renderHistory();
+      progBar.style.width = '100%';
+      if (urls.length > 1) {
+        progLabel.textContent = 'Concluido!';
+        progDetail.textContent = ok + ' ok, ' + fail + ' erro' + (fail > 0 ? 's' : '');
+        setTimeout(function() { prog.classList.remove('visible'); }, 4000);
+        showToast(ok + '/' + urls.length + ' posts analisados!');
+      } else {
+        showToast(ok > 0 ? 'Analise concluida!' : 'Erro ao analisar', ok > 0 ? 'success' : 'error');
+      }
+      input.value = '';
+      btn.disabled = false;
+      label.textContent = 'Analisar';
+      spinner.style.display = 'none';
+      return;
+    }
+
+    var url = urls[i];
+    if (urls.length > 1) {
+      progCount.textContent = (i + 1) + '/' + urls.length;
+      progBar.style.width = ((i) / urls.length * 100) + '%';
+      progDetail.textContent = url.length > 50 ? url.substring(0, 50) + '...' : url;
+      progLabel.textContent = 'Analisando...';
+    }
+
+    fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: url })
+    }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+      if (!res.ok || res.data.error) throw new Error(res.data.error || 'Erro');
+      res.data.id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+      res.data.timestamp = new Date().toISOString();
+      var posts = getStorage();
+      posts.unshift(res.data);
+      setStorage(posts);
+      lastData = res.data;
+      ok++;
+    }).catch(function() { fail++; })
+    .finally(function() { i++; processNext(); });
+  }
+
+  processNext();
+}
+
+/* ═══════════════════════════════════
+   REFRESH ALL
+   ═══════════════════════════════════ */
+
+function refreshAllPosts() {
+  var posts = getStorage();
+  if (posts.length === 0) { showToast('Nenhum post para atualizar', 'info'); return; }
+
+  var btn = document.getElementById('refreshAllBtn');
+  var status = document.getElementById('refreshStatus');
+  var label = document.getElementById('refreshLabel');
+  var count = document.getElementById('refreshCount');
+  var bar = document.getElementById('refreshBar');
+  var detail = document.getElementById('refreshDetail');
+
+  btn.disabled = true;
+  btn.innerHTML = '&#128260; Atualizando...';
+  status.style.display = 'block';
+
+  var ok = 0, fail = 0, i = 0;
+
+  function refreshNext() {
+    if (i >= posts.length) {
+      setStorage(posts);
+      bar.style.width = '100%';
+      label.textContent = 'Concluido!';
+      detail.textContent = ok + ' atualizados' + (fail > 0 ? ', ' + fail + ' erro' + (fail > 1 ? 's' : '') : '');
+      renderHistory();
+      showToast(ok + '/' + posts.length + ' posts atualizados!');
+      setTimeout(function() { status.style.display = 'none'; }, 4000);
+      btn.disabled = false;
+      btn.innerHTML = '&#128260; Atualizar';
+      return;
+    }
+
+    var p = posts[i];
+    count.textContent = (i + 1) + '/' + posts.length;
+    bar.style.width = ((i) / posts.length * 100) + '%';
+    detail.textContent = p.url || p.title || 'Post';
+    label.textContent = 'Atualizando...';
+
+    fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: p.url })
+    }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+      if (!res.ok || res.data.error) throw new Error();
+      var d = res.data;
+      posts[i].likes = d.likes;
+      posts[i].comments = d.comments;
+      posts[i].views = d.views;
+      posts[i].views_unavailable = d.views_unavailable;
+      posts[i].saves = d.saves;
+      posts[i].shares = d.shares;
+      posts[i].reach = d.reach;
+      posts[i].caption = d.caption;
+      posts[i].hashtags = d.hashtags;
+      posts[i].source = d.source;
+      posts[i].thumbnailUrl = d.thumbnailUrl;
+      posts[i].updatedAt = new Date().toISOString();
+      ok++;
+    }).catch(function() { fail++; })
+    .finally(function() { i++; refreshNext(); });
+  }
+
+  refreshNext();
+}
+
+/* ═══════════════════════════════════
+   DELETE / CLEAR
+   ═══════════════════════════════════ */
+
+function deletePost(id) {
+  setStorage(getStorage().filter(function(p) { return p.id !== id; }));
+  renderHistory();
+  renderDashboard();
+  showToast('Post removido');
+}
+
+function clearAll() {
+  if (getStorage().length === 0) return;
+  if (confirm('Excluir todos os posts do historico?')) {
+    setStorage([]);
+    renderHistory();
+    renderDashboard();
+    document.getElementById('resultArea').classList.remove('visible');
+    showToast('Historico limpo');
+  }
+}
+
+/* ═══════════════════════════════════
+   DASHBOARD / RANKING
+   ═══════════════════════════════════ */
+
+function calcEngagement(p) {
+  var base = p.views || p.reach || p.likes || 0;
+  if (base === 0) return 0;
+  return (((p.likes || 0) + (p.comments || 0) + (p.saves || 0) + (p.shares || 0)) / base * 100);
+}
+
+var chartEng = null, chartMet = null, chartDist = null;
+
+function renderDashboard() {
+  renderRanking();
+  var posts = getStorage();
+  if (posts.length > 0) renderCharts(posts);
+}
+
+function renderRanking() {
+  var posts = getStorage();
+  var metricEl = document.getElementById('rankMetric');
+  var metric = metricEl ? metricEl.value : 'engagement';
+  var list = document.getElementById('rankingList');
+
+  if (posts.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text-muted);grid-column:1/-1">Nenhum post para ranquear.</div>';
+    return;
+  }
+
+  var scored = posts.map(function(p) {
+    var value, display;
+    switch (metric) {
+      case 'likes': value = p.likes || 0; display = formatNumber(value); break;
+      case 'views': value = p.views || 0; display = formatNumber(value); break;
+      case 'comments': value = p.comments || 0; display = formatNumber(value); break;
+      case 'reach': value = p.reach || 0; display = formatNumber(value); break;
+      default: value = calcEngagement(p); display = value.toFixed(1) + '%';
+    }
+    return Object.assign({}, p, { _value: value, _display: display, _eng: calcEngagement(p) });
+  }).sort(function(a, b) { return b._value - a._value; });
+
+  var maxVal = scored[0]._value || 1;
+
+  list.innerHTML = scored.map(function(p, i) {
+    var posClass = i === 0 ? 'gold' : (i === 1 ? 'silver' : (i === 2 ? 'bronze' : 'normal'));
+    var barPct = (p._value / maxVal * 100);
+    var thumbHtml = p.thumbnailUrl
+      ? '<a href="' + p.url + '" target="_blank" class="rank-thumb" title="Abrir video"><img src="' + p.thumbnailUrl.replace(/&amp;/g, '&') + '" alt="" onerror="this.parentElement.textContent=\'\uD83D\uDCF8\'"></a>'
+      : '<a href="' + p.url + '" target="_blank" class="rank-thumb" title="Abrir video">\uD83D\uDCF8</a>';
+    return '<div class="rank-item">' +
+      '<div class="rank-pos ' + posClass + '">' + (i + 1) + '</div>' +
+      thumbHtml +
+      '<div class="rank-info">' +
+        '<div class="rank-title">' + (p.title || p.postId || 'Post') + '</div>' +
+        '<div class="rank-author">@' + (p.author || '?') + ' \u00B7 ' + (p.type || 'Post') + '</div>' +
+        '<div class="rank-bar"><div class="rank-bar-fill" style="width:' + barPct + '%"></div></div>' +
+      '</div>' +
+      '<div class="rank-right">' +
+        '<div class="rank-value">' + p._display + '</div>' +
+        (metric !== 'engagement' ? '<div class="rank-pct">' + p._eng.toFixed(1) + '% eng</div>' : '') +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+/* ═══════════════════════════════════
+   CHARTS
+   ═══════════════════════════════════ */
+
+function renderCharts(posts) {
+  var labels = posts.map(function(p) {
+    var t = (p.title || p.postId || 'Post');
+    return t.length > 18 ? t.substring(0, 18) + '...' : t;
+  });
+
+  var likes = posts.map(function(p) { return p.likes || 0; });
+  var comments = posts.map(function(p) { return p.comments || 0; });
+  var views = posts.map(function(p) { return p.views || 0; });
+  var reach = posts.map(function(p) { return p.reach || 0; });
+  var engagements = posts.map(function(p) { return calcEngagement(p); });
+
+  var gP = 'rgba(155,114,207,0.7)', gK = 'rgba(201,168,76,0.7)', gR = 'rgba(201,90,90,0.6)',
+      gB = 'rgba(91,142,201,0.7)', gV = 'rgba(90,173,106,0.7)', gO = 'rgba(212,148,74,0.7)';
+
+  var chartOpts = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { color: '#6b6259', font: { size: 11 } } } },
+    scales: {
+      x: { ticks: { color: '#9b9289', font: { size: 10 } }, grid: { color: 'rgba(45,38,32,0.06)' } },
+      y: { ticks: { color: '#9b9289', font: { size: 10 } }, grid: { color: 'rgba(45,38,32,0.06)' } }
+    }
+  };
+
+  if (chartEng) chartEng.destroy();
+  chartEng = new Chart(document.getElementById('chartEngagement'), {
+    type: 'bar',
+    data: { labels: labels, datasets: [{ label: 'Engajamento %', data: engagements, backgroundColor: engagements.map(function(v) { return v > 5 ? gV : (v > 2 ? gO : gR); }), borderRadius: 6, borderSkipped: false }] },
+    options: Object.assign({}, chartOpts, { plugins: { legend: { labels: { color: '#6b6259', font: { size: 11 } } }, tooltip: { callbacks: { label: function(ctx) { return ctx.parsed.y.toFixed(1) + '%'; } } } } })
+  });
+
+  if (chartMet) chartMet.destroy();
+  chartMet = new Chart(document.getElementById('chartMetrics'), {
+    type: 'bar',
+    data: { labels: labels, datasets: [
+      { label: 'Curtidas', data: likes, backgroundColor: gK, borderRadius: 4 },
+      { label: 'Views', data: views, backgroundColor: gP, borderRadius: 4 },
+      { label: 'Comentarios', data: comments, backgroundColor: gB, borderRadius: 4 }
+    ] },
+    options: chartOpts
+  });
+
+  if (chartDist) chartDist.destroy();
+  chartDist = new Chart(document.getElementById('chartDistrib'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Curtidas', 'Comentarios', 'Views', 'Alcance'],
+      datasets: [{ data: [likes.reduce(function(a,b){return a+b;},0), comments.reduce(function(a,b){return a+b;},0), views.reduce(function(a,b){return a+b;},0), reach.reduce(function(a,b){return a+b;},0)], backgroundColor: [gK, gB, gP, gV], borderWidth: 0, hoverOffset: 8 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#6b6259', font: { size: 11 }, padding: 14 } } } }
+  });
+}
+
+/* ═══════════════════════════════════
+   EVENTS
+   ═══════════════════════════════════ */
+
+document.getElementById('urlInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); analyzePost(); }
+});
+
+document.getElementById('urlInput').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+});
+
+checkLoginStatus();
+renderHistory();
+</script>
+
+</body>
+</html>

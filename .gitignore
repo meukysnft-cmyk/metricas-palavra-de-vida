@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+cookies.json
+config.json
+debug_login.png
+.env
+*.bat
+.vscode/
